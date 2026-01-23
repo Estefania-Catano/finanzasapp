@@ -1,4 +1,4 @@
-function obtenerGastos() {
+﻿function obtenerGastos() {
   return JSON.parse(localStorage.getItem("gastosFijos")) || [];
 }
 
@@ -28,34 +28,51 @@ function hoyISO() {
 
 function obtenerMesActual() {
   const hoy = new Date();
-  const año = hoy.getFullYear();
+  const anio = hoy.getFullYear();
   const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-  return `${año}-${mes}`;
+  return `${anio}-${mes}`;
 }
 
-function obtenerUltimoDiaMes(año, mesIndex) {
-  return new Date(año, mesIndex + 1, 0).getDate();
+function obtenerUltimoDiaMes(anio, mesIndex) {
+  return new Date(anio, mesIndex + 1, 0).getDate();
 }
 
-function fechaPagoDelMes(diaPago) {
-  const hoy = new Date();
-  const año = hoy.getFullYear();
-  const mes = hoy.getMonth();
-
-  const ultimoDiaMes = obtenerUltimoDiaMes(año, mes);
-  const diaReal = Math.min(diaPago, ultimoDiaMes);
-
-  return new Date(año, mes, diaReal);
+function fechaDelMes(anio, mesIndex, diaPago) {
+  const ultimoDia = obtenerUltimoDiaMes(anio, mesIndex);
+  const diaReal = Math.min(Number(diaPago), ultimoDia);
+  const fecha = new Date(anio, mesIndex, diaReal);
+  fecha.setHours(0, 0, 0, 0);
+  return fecha;
 }
 
-function diasDiferencia(hoy, fechaPago) {
-  const ms = fechaPago.getTime() - hoy.getTime();
+function diasDiferencia(hoy, fechaObjetivo) {
+  const ms = fechaObjetivo.getTime() - hoy.getTime();
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
 
-function yaPagadoEsteMes(gasto) {
-  const mesActual = obtenerMesActual();
-  return (gasto.historialPagos || []).some(p => p.mes === mesActual);
+function yaPagadoMes(gasto, mesISO) {
+  return (gasto.historialPagos || []).some(p => p.mes === mesISO);
+}
+
+/* =====================================
+VENCIMIENTO REAL: el próximo vencimiento será el mes siguiente
+===================================== */
+function obtenerProximoVencimiento(gasto) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const anio = hoy.getFullYear();
+  const mesIndex = hoy.getMonth();
+
+  // fecha de vencimiento en el mes actual
+  let vencimiento = fechaDelMes(anio, mesIndex, gasto.diaPago);
+
+  // si ya pasó hoy, entonces el próximo es el mes siguiente
+  if (vencimiento < hoy) {
+    vencimiento = fechaDelMes(anio, mesIndex + 1, gasto.diaPago);
+  }
+
+  return vencimiento;
 }
 
 /* ===========================
@@ -158,7 +175,8 @@ function pintarLista() {
   gastos.sort((a, b) => a.diaPago - b.diaPago);
 
   gastos.forEach((g) => {
-    const pagado = yaPagadoEsteMes(g);
+    const mesActual = obtenerMesActual();
+    const pagado = yaPagadoMes(g, mesActual);
 
     const div = document.createElement("div");
     div.className = "border rounded p-3 mb-2";
@@ -202,8 +220,8 @@ function pintarAlertas() {
   const alertasDiv = document.getElementById("alertas");
   const gastos = obtenerGastos();
   const hoy = new Date();
-
   hoy.setHours(0, 0, 0, 0);
+
   alertasDiv.innerHTML = "";
 
   if (gastos.length === 0) {
@@ -211,45 +229,37 @@ function pintarAlertas() {
     return;
   }
 
-  gastos.sort((a, b) => a.diaPago - b.diaPago);
-
   let pendientes = 0;
 
   gastos.forEach((g) => {
-    const pagado = yaPagadoEsteMes(g);
-    if (pagado) return;
+    const proximoVenc = obtenerProximoVencimiento(g);
+
+    const mesProximo = `${proximoVenc.getFullYear()}-${String(proximoVenc.getMonth() + 1).padStart(2, "0")}`;
+
+    // si ya pagaste ese mes, no alertar
+    if (yaPagadoMes(g, mesProximo)) return;
 
     pendientes++;
 
-    const pagoMes = fechaPagoDelMes(g.diaPago);
-    pagoMes.setHours(0, 0, 0, 0);
+    const faltan = diasDiferencia(hoy, proximoVenc);
 
-    const faltan = diasDiferencia(hoy, pagoMes);
-
-    let texto = "";
     let clase = "alert-secondary";
+    let texto = "";
 
     if (faltan > 5) {
-      texto = `📌 ${g.nombre}: vence este mes (faltan ${faltan} días).`;
+      texto = `📌 ${g.nombre}: próximo pago el ${proximoVenc.toLocaleDateString("es-CO")}`;
       clase = "alert-secondary";
     } else if (faltan >= 1 && faltan <= 5) {
-      texto = `⚠️ ${g.nombre}: vence pronto (faltan ${faltan} días).`;
+      texto = `⚠️ ${g.nombre}: pago pronto (${proximoVenc.toLocaleDateString("es-CO")})`;
       clase = "alert-warning";
     } else if (faltan === 0) {
-      texto = `🚨 ${g.nombre}: vence HOY.`;
+      texto = `🚨 ${g.nombre}: vence HOY (${proximoVenc.toLocaleDateString("es-CO")})`;
       clase = "alert-danger";
     } else {
-      texto = `❌ ${g.nombre}: está vencido (debía pagarse este mes).`;
+      // si llegara a pasar por error, igual lo muestra como vencido
+      texto = `❌ ${g.nombre}: pago vencido (${proximoVenc.toLocaleDateString("es-CO")})`;
       clase = "alert-danger";
     }
-
-    const hoyTemp = new Date();
-    const ultimoDiaMes = obtenerUltimoDiaMes(hoyTemp.getFullYear(), hoyTemp.getMonth());
-    const diaReal = Math.min(g.diaPago, ultimoDiaMes);
-
-    const ajusteTexto = (diaReal !== g.diaPago)
-      ? ` (este mes se paga el ${diaReal})`
-      : "";
 
     const valorTexto =
       g.tipoValor === "fijo"
@@ -260,9 +270,7 @@ function pintarAlertas() {
     alerta.className = `alert ${clase} mb-2 d-flex justify-content-between align-items-center gap-2 flex-wrap`;
 
     alerta.innerHTML = `
-      <div>
-        ${texto} Día programado: ${g.diaPago}${ajusteTexto}.${valorTexto}
-      </div>
+      <div>${texto}${valorTexto}</div>
       <button class="btn btn-sm btn-success btn-pagar" data-id="${g.id}">
         Marcar pagado
       </button>
@@ -272,7 +280,7 @@ function pintarAlertas() {
   });
 
   if (pendientes === 0) {
-    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 Todo está pagado este mes.</div>`;
+    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 Todo está pagado o al día.</div>`;
   }
 }
 
@@ -289,23 +297,13 @@ document.getElementById("formGastoFijo").addEventListener("submit", function (e)
   const tipoValor = document.getElementById("tipoValor").value;
   const valorInput = document.getElementById("valor").value;
 
-  if (!nombre) {
-    alert("El nombre es obligatorio");
-    return;
-  }
-
-  if (!diaPago || diaPago < 1 || diaPago > 31) {
-    alert("El día de pago debe estar entre 1 y 31");
-    return;
-  }
+  if (!nombre) return alert("El nombre es obligatorio");
+  if (!diaPago || diaPago < 1 || diaPago > 31) return alert("El día de pago debe estar entre 1 y 31");
 
   let valor = null;
 
   if (tipoValor === "fijo") {
-    if (!valorInput || Number(valorInput) <= 0) {
-      alert("Si el valor es fijo debes ingresar un valor válido");
-      return;
-    }
+    if (!valorInput || Number(valorInput) <= 0) return alert("Si el valor es fijo debes ingresar un valor válido");
     valor = Number(valorInput);
   }
 
@@ -351,13 +349,7 @@ document.addEventListener("click", function (e) {
     const id = e.target.getAttribute("data-id");
     const gastos = obtenerGastos();
     const gasto = gastos.find(g => String(g.id) === String(id));
-
     if (!gasto) return;
-
-    if (yaPagadoEsteMes(gasto)) {
-      alert("Este gasto ya está pagado este mes ✅");
-      return;
-    }
 
     abrirModalPago(gasto);
   }
@@ -379,46 +371,35 @@ document.getElementById("btnGuardarPago").addEventListener("click", function () 
   if (!gastoSeleccionado) return;
 
   const cuentaId = document.getElementById("cuentaPagoModal").value;
-  if (!cuentaId) {
-    alert("Selecciona una cuenta para registrar el pago");
-    return;
-  }
+  if (!cuentaId) return alert("Selecciona una cuenta para registrar el pago");
 
   const gastos = obtenerGastos();
   const gasto = gastos.find(g => String(g.id) === String(gastoSeleccionado.id));
   if (!gasto) return;
 
-  if (yaPagadoEsteMes(gasto)) {
-    alert("Este gasto ya está pagado este mes ✅");
-    modalPagar.hide();
-    return;
-  }
-
   const fecha = document.getElementById("fechaPagoModal").value || hoyISO();
-  const mes = obtenerMesActual();
+
+  // ✅ se marca pagado para el mes del próximo vencimiento (no siempre el mes actual)
+  const prox = obtenerProximoVencimiento(gasto);
+  const mes = `${prox.getFullYear()}-${String(prox.getMonth() + 1).padStart(2, "0")}`;
 
   let valorPago = gasto.valor;
 
   if (gasto.tipoValor === "variable") {
     const valorInput = document.getElementById("valorPagoModal").value;
-    if (!valorInput || Number(valorInput) <= 0) {
-      alert("Ingresa un valor válido");
-      return;
-    }
+    if (!valorInput || Number(valorInput) <= 0) return alert("Ingresa un valor válido");
     valorPago = Number(valorInput);
   }
 
-  // 1) Registrar movimiento en cuenta y descontar saldo
   const ok = registrarPagoEnCuenta(cuentaId, gasto.nombre, fecha, valorPago);
   if (!ok) return;
 
-  // 2) Guardar en historial del gasto fijo
   gasto.historialPagos = gasto.historialPagos || [];
   gasto.historialPagos.push({
     mes,
     fecha,
     valor: Number(valorPago),
-    cuentaId: cuentaId
+    cuentaId
   });
 
   guardarGastos(gastos);

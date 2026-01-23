@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -6,22 +6,20 @@
   <title>Ingresos fijos</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="fixed-income.css">
 </head>
-
-<body class="p-3">
-
-  <nav class="navbar navbar-expand-lg navbar-dark px-3" style="background-color:#0d5123;">
-    <a class="navbar-brand fw-bold" href="../../index.html">FinanzasApp</a>
+<nav class="navbar navbar-expand-lg navbar-dark px-3" style="background-color:#0d5123;">
+    <a class="navbar-brand fw-bold" href="../index.html">FinanzasApp</a>
 
     <div class="ms-auto d-flex gap-2">
-      <a class="btn btn-outline-light btn-sm" href="../../index.html">← Inicio</a>
+      <a class="btn btn-outline-light btn-sm" href="../index.html">← Inicio</a>
     </div>
   </nav>
 
-  <div class="container py-4">
+<body class="p-3">
 
-    <h2 class="mb-3">Ingresos fijos</h2>
+  <div class="container">
+
+    <h1 class="mb-3">Ingresos fijos</h1>
 
     <!-- FORMULARIO -->
     <div class="card shadow-sm mb-3">
@@ -32,7 +30,7 @@
 
           <div class="col-md-4">
             <label class="form-label">Nombre</label>
-            <input type="text" id="nombre" class="form-control" placeholder="Sueldo, arriendo, etc." required>
+            <input type="text" id="nombre" class="form-control" placeholder="Salario, Arriendo, etc." required>
           </div>
 
           <div class="col-md-3">
@@ -89,7 +87,7 @@
       <div class="modal-content">
 
         <div class="modal-header">
-          <h5 class="modal-title">Registrar ingreso</h5>
+          <h5 class="modal-title">Registrar ingreso recibido</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
@@ -102,7 +100,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Cuenta donde entra</label>
+            <label class="form-label">Cuenta donde entra el dinero</label>
             <select id="cuentaIngresoModal" class="form-select" required>
               <option value="">Seleccione una cuenta</option>
             </select>
@@ -110,7 +108,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Fecha</label>
+            <label class="form-label">Fecha recibido</label>
             <input type="date" id="fechaIngresoModal" class="form-control">
           </div>
 
@@ -129,7 +127,6 @@
       </div>
     </div>
   </div>
-
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="fixed-income.js"></script>

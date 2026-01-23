@@ -1,4 +1,4 @@
-function obtenerIngresos() {
+﻿function obtenerIngresos() {
   return JSON.parse(localStorage.getItem("ingresosFijos")) || [];
 }
 
@@ -28,37 +28,54 @@ function hoyISO() {
 
 function obtenerMesActual() {
   const hoy = new Date();
-  const año = hoy.getFullYear();
+  const anio = hoy.getFullYear();
   const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-  return `${año}-${mes}`;
+  return `${anio}-${mes}`;
 }
 
-function obtenerUltimoDiaMes(año, mesIndex) {
-  return new Date(año, mesIndex + 1, 0).getDate();
+function obtenerUltimoDiaMes(anio, mesIndex) {
+  return new Date(anio, mesIndex + 1, 0).getDate();
 }
 
-function fechaIngresoDelMes(diaIngreso) {
-  const hoy = new Date();
-  const año = hoy.getFullYear();
-  const mes = hoy.getMonth();
-
-  const ultimoDiaMes = obtenerUltimoDiaMes(año, mes);
-  const diaReal = Math.min(diaIngreso, ultimoDiaMes);
-
-  return new Date(año, mes, diaReal);
+function fechaDelMes(anio, mesIndex, dia) {
+  const ultimoDia = obtenerUltimoDiaMes(anio, mesIndex);
+  const diaReal = Math.min(Number(dia), ultimoDia);
+  const fecha = new Date(anio, mesIndex, diaReal);
+  fecha.setHours(0, 0, 0, 0);
+  return fecha;
 }
 
-function diasDiferencia(hoy, fecha) {
-  const ms = fecha.getTime() - hoy.getTime();
+function diasDiferencia(hoy, fechaObjetivo) {
+  const ms = fechaObjetivo.getTime() - hoy.getTime();
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
 
-function yaRecibidoEsteMes(ingreso) {
-  const mesActual = obtenerMesActual();
-  return (ingreso.historialRecibidos || []).some(p => p.mes === mesActual);
+function yaRecibidoMes(ingreso, mesISO) {
+  return (ingreso.historialRecibidos || []).some(p => p.mes === mesISO);
 }
 
-/* MODAL */
+/* =====================================
+   PRÓXIMO INGRESO REAL
+===================================== */
+function obtenerProximoIngreso(ingreso) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const anio = hoy.getFullYear();
+  const mesIndex = hoy.getMonth();
+
+  let fecha = fechaDelMes(anio, mesIndex, ingreso.diaIngreso);
+
+  if (fecha < hoy) {
+    fecha = fechaDelMes(anio, mesIndex + 1, ingreso.diaIngreso);
+  }
+
+  return fecha;
+}
+
+/* ===========================
+   MODAL
+=========================== */
 let modalRecibir;
 let ingresoSeleccionado = null;
 
@@ -112,7 +129,9 @@ function abrirModalIngreso(ingreso) {
   modalRecibir.show();
 }
 
-/* REGISTRAR MOVIMIENTO */
+/* ===========================
+   REGISTRAR MOVIMIENTO
+=========================== */
 function registrarIngresoEnCuenta(cuentaId, nombreIngreso, fecha, valor) {
   const cuentas = obtenerCuentas();
   const cuenta = cuentas.find(c => String(c.id) === String(cuentaId));
@@ -137,10 +156,13 @@ function registrarIngresoEnCuenta(cuentaId, nombreIngreso, fecha, valor) {
   return true;
 }
 
-/* UI */
+/* ===========================
+   UI
+=========================== */
 function pintarLista() {
   const lista = document.getElementById("listaIngresos");
   const ingresos = obtenerIngresos();
+  const mesActual = obtenerMesActual();
 
   lista.innerHTML = "";
 
@@ -152,7 +174,7 @@ function pintarLista() {
   ingresos.sort((a, b) => a.diaIngreso - b.diaIngreso);
 
   ingresos.forEach((i) => {
-    const recibido = yaRecibidoEsteMes(i);
+    const recibido = yaRecibidoMes(i, mesActual);
 
     const div = document.createElement("div");
     div.className = "border rounded p-3 mb-2";
@@ -196,8 +218,8 @@ function pintarAlertas() {
   const alertasDiv = document.getElementById("alertas");
   const ingresos = obtenerIngresos();
   const hoy = new Date();
-
   hoy.setHours(0, 0, 0, 0);
+
   alertasDiv.innerHTML = "";
 
   if (ingresos.length === 0) {
@@ -205,45 +227,34 @@ function pintarAlertas() {
     return;
   }
 
-  ingresos.sort((a, b) => a.diaIngreso - b.diaIngreso);
-
   let pendientes = 0;
 
   ingresos.forEach((i) => {
-    const recibido = yaRecibidoEsteMes(i);
-    if (recibido) return;
+    const proximo = obtenerProximoIngreso(i);
+    const mesProximo = `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, "0")}`;
+
+    if (yaRecibidoMes(i, mesProximo)) return;
 
     pendientes++;
 
-    const fecha = fechaIngresoDelMes(i.diaIngreso);
-    fecha.setHours(0, 0, 0, 0);
-
-    const faltan = diasDiferencia(hoy, fecha);
+    const faltan = diasDiferencia(hoy, proximo);
 
     let texto = "";
     let clase = "alert-secondary";
 
     if (faltan > 5) {
-      texto = `📌 ${i.nombre}: llega este mes (faltan ${faltan} días).`;
+      texto = `📌 ${i.nombre}: llega el ${proximo.toLocaleDateString("es-CO")}`;
       clase = "alert-secondary";
     } else if (faltan >= 1 && faltan <= 5) {
-      texto = `⚠️ ${i.nombre}: llega pronto (faltan ${faltan} días).`;
+      texto = `⚠️ ${i.nombre}: llega pronto (${proximo.toLocaleDateString("es-CO")})`;
       clase = "alert-warning";
     } else if (faltan === 0) {
-      texto = `💰 ${i.nombre}: llega HOY.`;
+      texto = `💰 ${i.nombre}: llega HOY (${proximo.toLocaleDateString("es-CO")})`;
       clase = "alert-success";
     } else {
-      texto = `⏳ ${i.nombre}: ya debía llegar este mes.`;
+      texto = `⏳ ${i.nombre}: ya debía llegar (${proximo.toLocaleDateString("es-CO")})`;
       clase = "alert-danger";
     }
-
-    const hoyTemp = new Date();
-    const ultimoDiaMes = obtenerUltimoDiaMes(hoyTemp.getFullYear(), hoyTemp.getMonth());
-    const diaReal = Math.min(i.diaIngreso, ultimoDiaMes);
-
-    const ajusteTexto = (diaReal !== i.diaIngreso)
-      ? ` (este mes llega el ${diaReal})`
-      : "";
 
     const valorTexto =
       i.tipoValor === "fijo"
@@ -254,9 +265,7 @@ function pintarAlertas() {
     alerta.className = `alert ${clase} mb-2 d-flex justify-content-between align-items-center gap-2 flex-wrap`;
 
     alerta.innerHTML = `
-      <div>
-        ${texto} Día programado: ${i.diaIngreso}${ajusteTexto}.${valorTexto}
-      </div>
+      <div>${texto}${valorTexto}</div>
       <button class="btn btn-sm btn-success btn-recibir" data-id="${i.id}">
         Marcar recibido
       </button>
@@ -266,11 +275,15 @@ function pintarAlertas() {
   });
 
   if (pendientes === 0) {
-    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 Todos los ingresos ya fueron recibidos este mes.</div>`;
+    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 Todos los ingresos ya fueron recibidos o están al día.</div>`;
   }
 }
 
-/* EVENTOS */
+/* ===========================
+   EVENTOS
+=========================== */
+
+// Crear ingreso fijo
 document.getElementById("formIngresoFijo").addEventListener("submit", function (e) {
   e.preventDefault();
 
@@ -279,23 +292,13 @@ document.getElementById("formIngresoFijo").addEventListener("submit", function (
   const tipoValor = document.getElementById("tipoValor").value;
   const valorInput = document.getElementById("valor").value;
 
-  if (!nombre) {
-    alert("El nombre es obligatorio");
-    return;
-  }
-
-  if (!diaIngreso || diaIngreso < 1 || diaIngreso > 31) {
-    alert("El día debe estar entre 1 y 31");
-    return;
-  }
+  if (!nombre) return alert("El nombre es obligatorio");
+  if (!diaIngreso || diaIngreso < 1 || diaIngreso > 31) return alert("El día debe estar entre 1 y 31");
 
   let valor = null;
 
   if (tipoValor === "fijo") {
-    if (!valorInput || Number(valorInput) <= 0) {
-      alert("Si el valor es fijo debes ingresar un valor válido");
-      return;
-    }
+    if (!valorInput || Number(valorInput) <= 0) return alert("Si el valor es fijo debes ingresar un valor válido");
     valor = Number(valorInput);
   }
 
@@ -319,6 +322,7 @@ document.getElementById("formIngresoFijo").addEventListener("submit", function (
   pintarAlertas();
 });
 
+// Cambio tipo valor
 document.getElementById("tipoValor").addEventListener("change", function () {
   const valorInput = document.getElementById("valor");
   const ayuda = document.getElementById("ayudaValor");
@@ -333,18 +337,13 @@ document.getElementById("tipoValor").addEventListener("change", function () {
   }
 });
 
+// Clicks
 document.addEventListener("click", function (e) {
   if (e.target.classList.contains("btn-recibir")) {
     const id = e.target.getAttribute("data-id");
     const ingresos = obtenerIngresos();
     const ingreso = ingresos.find(i => String(i.id) === String(id));
-
     if (!ingreso) return;
-
-    if (yaRecibidoEsteMes(ingreso)) {
-      alert("Este ingreso ya fue recibido este mes ✅");
-      return;
-    }
 
     abrirModalIngreso(ingreso);
   }
@@ -361,36 +360,27 @@ document.addEventListener("click", function (e) {
   }
 });
 
+// Guardar ingreso desde modal
 document.getElementById("btnGuardarIngreso").addEventListener("click", function () {
   if (!ingresoSeleccionado) return;
 
   const cuentaId = document.getElementById("cuentaIngresoModal").value;
-  if (!cuentaId) {
-    alert("Selecciona una cuenta para registrar el ingreso");
-    return;
-  }
+  if (!cuentaId) return alert("Selecciona una cuenta");
 
   const ingresos = obtenerIngresos();
   const ingreso = ingresos.find(i => String(i.id) === String(ingresoSeleccionado.id));
   if (!ingreso) return;
 
-  if (yaRecibidoEsteMes(ingreso)) {
-    alert("Este ingreso ya fue recibido este mes ✅");
-    modalRecibir.hide();
-    return;
-  }
-
   const fecha = document.getElementById("fechaIngresoModal").value || hoyISO();
-  const mes = obtenerMesActual();
+
+  const proximo = obtenerProximoIngreso(ingreso);
+  const mes = `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, "0")}`;
 
   let valorRecibido = ingreso.valor;
 
   if (ingreso.tipoValor === "variable") {
     const valorInput = document.getElementById("valorIngresoModal").value;
-    if (!valorInput || Number(valorInput) <= 0) {
-      alert("Ingresa un valor válido");
-      return;
-    }
+    if (!valorInput || Number(valorInput) <= 0) return alert("Ingresa un valor válido");
     valorRecibido = Number(valorInput);
   }
 
