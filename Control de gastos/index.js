@@ -10,8 +10,12 @@ function obtenerIngresosFijos() {
   return JSON.parse(localStorage.getItem("ingresosFijos")) || [];
 }
 
-function obtenerAccountsReceivable() {
-  return JSON.parse(localStorage.getItem("accountsReceivable")) || [];
+function obtenerCuentasPorCobrar() {
+  return JSON.parse(localStorage.getItem("cuentasPorCobrar")) || [];
+}
+
+function obtenerCuentasPorPagar() {
+  return JSON.parse(localStorage.getItem("cuentasPorPagar")) || [];
 }
 
 function formatearCOP(valor) {
@@ -26,7 +30,6 @@ function obtenerUltimoDiaMes(año, mesIndex) {
   return new Date(año, mesIndex + 1, 0).getDate();
 }
 
-// Ajusta 29/30/31 a último día del mes si no existe
 function fechaAjustadaDelMes(dia) {
   const hoy = new Date();
   const año = hoy.getFullYear();
@@ -52,6 +55,9 @@ function obtenerMesActual() {
   return `${año}-${mes}`;
 }
 
+/* ======================
+   GASTOS / INGRESOS
+====================== */
 function yaPagadoEsteMes(gasto) {
   const mesActual = obtenerMesActual();
   return (gasto.historialPagos || []).some(p => p.mes === mesActual);
@@ -62,16 +68,47 @@ function yaRecibidoEsteMes(ingreso) {
   return (ingreso.historialRecibidos || []).some(p => p.mes === mesActual);
 }
 
+/* ======================
+   PERIODOS
+====================== */
+function obtenerPeriodos(periodicidad) {
+  if (periodicidad === "quincenal") {
+    return [
+      { key: "Q1", dia: 15, label: "Quincena 1 (15)" },
+      { key: "Q2", dia: 30, label: "Quincena 2 (30)" }
+    ];
+  }
+
+  if (periodicidad === "decadal") {
+    return [
+      { key: "D1", dia: 10, label: "Década 1 (10)" },
+      { key: "D2", dia: 20, label: "Década 2 (20)" },
+      { key: "D3", dia: 30, label: "Década 3 (30)" }
+    ];
+  }
+
+  return [{ key: "M1", dia: null, label: "Mensual" }];
+}
+
+function yaPagoPeriodoEsteMes(item, periodoKey) {
+  const mes = obtenerMesActual();
+  return (item.historialPagos || []).some(p => p.mes === mes && p.periodoKey === periodoKey);
+}
+
+/* ======================
+   DASHBOARD
+====================== */
 function cargarDashboard() {
   const cuentas = obtenerCuentas();
   const gastosFijos = obtenerGastosFijos();
   const ingresosFijos = obtenerIngresosFijos();
-  const accountsReceivable = obtenerAccountsReceivable();
+  const cuentasPorCobrar = obtenerCuentasPorCobrar();
+  const cuentasPorPagar = obtenerCuentasPorPagar();
 
   // Total cuentas
   document.getElementById("totalCuentas").textContent = cuentas.length;
 
-  // Saldo total (suma simple en COP)
+  // Saldo total
   const saldoTotal = cuentas.reduce((acc, c) => acc + (Number(c.saldo) || 0), 0);
   document.getElementById("saldoTotal").textContent = formatearCOP(saldoTotal);
 
@@ -81,10 +118,13 @@ function cargarDashboard() {
   const elIngresos = document.getElementById("totalIngresosFijos");
   if (elIngresos) elIngresos.textContent = ingresosFijos.length;
 
-    const elAccountsReceivable = document.getElementById("totalaccountsReceivable");
-  if (elAccountsReceivable) elAccountsReceivable.textContent = accountsReceivable.length;
+  const elCXC = document.getElementById("totalaccountsReceivable");
+  if (elCXC) elCXC.textContent = cuentasPorCobrar.length;
 
-  // Alertas combinadas
+  const elCXP = document.getElementById("totalaccountsPayable");
+  if (elCXP) elCXP.textContent = cuentasPorPagar.length;
+
+  // ALERTAS
   const alertasDiv = document.getElementById("alertasDashboard");
   alertasDiv.innerHTML = "";
 
@@ -93,7 +133,7 @@ function cargarDashboard() {
 
   const alertas = [];
 
-  // GASTOS (solo pendientes)
+  /* ===== GASTOS ===== */
   gastosFijos.forEach((g) => {
     if (yaPagadoEsteMes(g)) return;
 
@@ -101,16 +141,17 @@ function cargarDashboard() {
     const faltan = diasDiferencia(hoy, fecha);
 
     alertas.push({
+      grupo: "Gasto fijo",
       tipo: "gasto",
       nombre: g.nombre,
-      dia: g.diaPago,
       faltan,
-      valorTexto: g.tipoValor === "fijo" ? formatearCOP(g.valor) : "Valor variable",
-      fecha
+      fecha,
+      detalle: `Vence día ${g.diaPago}`,
+      valorTexto: g.tipoValor === "fijo" ? formatearCOP(g.valor) : "Valor variable"
     });
   });
 
-  // INGRESOS (solo pendientes)
+  /* ===== INGRESOS ===== */
   ingresosFijos.forEach((i) => {
     if (yaRecibidoEsteMes(i)) return;
 
@@ -118,62 +159,156 @@ function cargarDashboard() {
     const faltan = diasDiferencia(hoy, fecha);
 
     alertas.push({
+      grupo: "Ingreso fijo",
       tipo: "ingreso",
       nombre: i.nombre,
-      dia: i.diaIngreso,
       faltan,
-      valorTexto: i.tipoValor === "fijo" ? formatearCOP(i.valor) : "Valor variable",
-      fecha
+      fecha,
+      detalle: `Llega día ${i.diaIngreso}`,
+      valorTexto: i.tipoValor === "fijo" ? formatearCOP(i.valor) : "Valor variable"
     });
   });
 
+  /* ===== CXC (alertas independientes por periodo) ===== */
+  cuentasPorCobrar
+    .filter(c => Number(c.saldoPendiente || 0) > 0)
+    .forEach((c) => {
+      const periodos = obtenerPeriodos(c.periodicidad);
+
+      periodos.forEach((p) => {
+        // si ya pagó ese periodo este mes, NO mostrar
+        if (yaPagoPeriodoEsteMes(c, p.key)) return;
+
+        const dia = (c.periodicidad === "mensual")
+          ? Number(c.diaPago)
+          : p.dia;
+
+        if (!dia) return;
+
+        const fecha = fechaAjustadaDelMes(dia);
+        const faltan = diasDiferencia(hoy, fecha);
+
+        const valorTexto = (c.tipoPago === "cuotas")
+          ? `Cuota: ${formatearCOP(c.cuotaValor)}`
+          : `Pendiente: ${formatearCOP(c.saldoPendiente)}`;
+
+        alertas.push({
+          grupo: "CXC",
+          tipo: "cxc",
+          nombre: c.nombreDeudor,
+          faltan,
+          fecha,
+          detalle: (c.periodicidad === "mensual")
+            ? `Mensual (día ${c.diaPago})`
+            : p.label,
+          valorTexto
+        });
+      });
+    });
+
+  /* ===== CXP (alertas independientes por periodo) ===== */
+  cuentasPorPagar
+    .filter(d => Number(d.saldoPendiente || 0) > 0)
+    .forEach((d) => {
+
+      // pago único
+      if (d.tipoPago === "unico") {
+        if (!d.fechaUnica) return;
+
+        const fecha = new Date(d.fechaUnica);
+        fecha.setHours(0, 0, 0, 0);
+
+        const faltan = diasDiferencia(hoy, fecha);
+
+        alertas.push({
+          grupo: "CXP",
+          tipo: "cxp",
+          nombre: d.acreedor,
+          faltan,
+          fecha,
+          detalle: "Pago único",
+          valorTexto: `Pendiente: ${formatearCOP(d.saldoPendiente)}`
+        });
+
+        return;
+      }
+
+      // cuotas
+      const periodos = obtenerPeriodos(d.periodicidad);
+
+      periodos.forEach((p) => {
+        // si ya pagó ese periodo este mes, NO mostrar
+        if (yaPagoPeriodoEsteMes(d, p.key)) return;
+
+        const dia = (d.periodicidad === "mensual")
+          ? Number(d.diaPago)
+          : p.dia;
+
+        if (!dia) return;
+
+        const fecha = fechaAjustadaDelMes(dia);
+        const faltan = diasDiferencia(hoy, fecha);
+
+        alertas.push({
+          grupo: "CXP",
+          tipo: "cxp",
+          nombre: d.acreedor,
+          faltan,
+          fecha,
+          detalle: (d.periodicidad === "mensual")
+            ? `Mensual (día ${d.diaPago})`
+            : p.label,
+          valorTexto: `Cuota: ${formatearCOP(d.cuotaValor)}`
+        });
+      });
+    });
+
   if (alertas.length === 0) {
-    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 No tienes pagos ni ingresos pendientes este mes.</div>`;
+    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 No tienes alertas pendientes este mes.</div>`;
     return;
   }
 
-  // Ordenar por fecha más cercana
+  // Ordenar por fecha
   alertas.sort((a, b) => a.fecha - b.fecha);
 
+  // Pintar alertas bonitas
   alertas.forEach((a) => {
     let clase = "alert-secondary";
-    let texto = "";
+    let emoji = "📌";
 
-    if (a.tipo === "gasto") {
-      if (a.faltan > 5) {
-        clase = "alert-secondary";
-        texto = `💸 ${a.nombre}: vence el día ${a.dia} (faltan ${a.faltan} días)`;
-      } else if (a.faltan >= 1 && a.faltan <= 5) {
-        clase = "alert-warning";
-        texto = `⚠️ ${a.nombre}: vence el día ${a.dia} (faltan ${a.faltan} días)`;
-      } else if (a.faltan === 0) {
-        clase = "alert-danger";
-        texto = `🚨 ${a.nombre}: vence HOY (día ${a.dia})`;
-      } else {
-        clase = "alert-danger";
-        texto = `❌ ${a.nombre}: está vencido (debía pagarse el día ${a.dia})`;
-      }
+    if (a.faltan > 5) {
+      clase = "alert-secondary";
+      emoji = "📌";
+    } else if (a.faltan >= 1 && a.faltan <= 5) {
+      clase = "alert-warning";
+      emoji = "⚠️";
+    } else if (a.faltan === 0) {
+      clase = (a.tipo === "ingreso" || a.tipo === "cxc") ? "alert-success" : "alert-danger";
+      emoji = (a.tipo === "ingreso" || a.tipo === "cxc") ? "💰" : "🚨";
     } else {
-      if (a.faltan > 5) {
-        clase = "alert-secondary";
-        texto = `💰 ${a.nombre}: llega el día ${a.dia} (faltan ${a.faltan} días)`;
-      } else if (a.faltan >= 1 && a.faltan <= 5) {
-        clase = "alert-warning";
-        texto = `⏳ ${a.nombre}: llega pronto (faltan ${a.faltan} días)`;
-      } else if (a.faltan === 0) {
-        clase = "alert-success";
-        texto = `✅ ${a.nombre}: llega HOY (día ${a.dia})`;
-      } else {
-        clase = "alert-danger";
-        texto = `❌ ${a.nombre}: ya debía llegar (día ${a.dia})`;
-      }
+      clase = "alert-danger";
+      emoji = "❌";
     }
 
-    const alerta = document.createElement("div");
-    alerta.className = `alert ${clase} mb-2`;
-    alerta.textContent = `${texto} • ${a.valorTexto}`;
+    let badgeTexto = "";
+    if (a.faltan > 0) badgeTexto = `Faltan: ${a.faltan} días`;
+    if (a.faltan === 0) badgeTexto = `HOY`;
+    if (a.faltan < 0) badgeTexto = `Vencido: ${Math.abs(a.faltan)} días`;
 
-    alertasDiv.appendChild(alerta);
+    const div = document.createElement("div");
+    div.className = `alert ${clase} mb-2`;
+
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <strong>${emoji} [${a.grupo}] ${a.nombre}</strong><br/>
+          <span class="small">${a.detalle} • ${a.valorTexto}</span>
+        </div>
+        <span class="badge text-bg-light">${badgeTexto}</span>
+      </div>
+    `;
+
+    alertasDiv.appendChild(div);
   });
 }
 

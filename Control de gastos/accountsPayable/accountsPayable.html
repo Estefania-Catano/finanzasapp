@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,7 +16,7 @@
     <a class="navbar-brand fw-bold" href="../index.html">FinanzasApp</a>
 
     <div class="ms-auto d-flex gap-2">
-      <a class="btn btn-outline-light btn-sm" href="../index.html">? Inicio</a>
+      <a class="btn btn-outline-light btn-sm" href="../index.html">← Inicio</a>
     </div>
   </nav>
 
@@ -45,6 +46,17 @@
             <input type="number" id="montoTotal" class="form-control" required>
           </div>
 
+          <!-- Periodicidad -->
+          <div class="col-md-4">
+            <label class="form-label">Periodicidad</label>
+            <select id="periodicidad" class="form-select" required>
+              <option value="mensual">Mensual</option>
+              <option value="quincenal">Quincenal (15 y 30)</option>
+              <option value="decadal">Decadal (10, 20 y 30)</option>
+            </select>
+          </div>
+
+          <!-- Tipo pago -->
           <div class="col-md-4">
             <label class="form-label">Tipo de pago</label>
             <select id="tipoPago" class="form-select" required>
@@ -53,26 +65,23 @@
             </select>
           </div>
 
+          <!-- Valor cuota -->
           <div class="col-md-4">
-            <label class="form-label">Frecuencia</label>
-            <select id="frecuencia" class="form-select">
-              <option value="mensual">Mensual</option>
-              <option value="quincenal">Quincenal</option>
-            </select>
+            <label class="form-label">Valor de la cuota</label>
+            <input type="number" id="cuotaValor" class="form-control" placeholder="Ej: 81000">
+            <div class="form-text" id="ayudaCuota">Obligatorio si es cuotas.</div>
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label">Valor cuota</label>
-            <input type="number" id="valorCuota" class="form-control" placeholder="Ej: 81000">
-          </div>
-
-          <div class="col-md-4" id="grupoDiaPago">
+          <!-- Día pago (solo mensual) -->
+          <div class="col-md-4" id="contenedorDiaPago">
             <label class="form-label">Día de pago (1-31)</label>
             <input type="number" id="diaPago" class="form-control" min="1" max="31">
+            <div class="form-text">Solo aplica si es mensual.</div>
           </div>
 
-          <div class="col-md-4 d-none" id="grupoFechaUnica">
-            <label class="form-label">Fecha de pago</label>
+          <!-- Fecha única (solo pago único) -->
+          <div class="col-md-4 d-none" id="contenedorFechaUnica">
+            <label class="form-label">Fecha de pago único</label>
             <input type="date" id="fechaUnica" class="form-control">
           </div>
 
@@ -102,7 +111,63 @@
 
   </div>
 
+  <!-- MODAL PAGAR -->
+  <div class="modal fade" id="modalPagoCXP" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar pago</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="deudaId">
+
+          <div class="mb-3">
+            <label class="form-label">Acreedor</label>
+            <input type="text" id="acreedorModal" class="form-control" disabled>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Periodo a pagar</label>
+            <input type="text" id="periodoModal" class="form-control" disabled>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cuenta desde donde pagas</label>
+            <select id="cuentaPagoModal" class="form-select" required>
+              <option value="">Seleccione una cuenta</option>
+            </select>
+            <div class="form-text" id="ayudaCuentas"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Fecha de pago</label>
+            <input type="date" id="fechaPagoModal" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Valor pagado</label>
+            <input type="number" id="valorPagoModal" class="form-control" placeholder="Ej: 50000">
+            <div class="form-text" id="ayudaPago"></div>
+          </div>
+
+          <div class="alert alert-info mb-0" id="infoPendiente"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-success" id="btnGuardarPago">Guardar pago</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="accountsPayable.js"></script>
 </body>
+
 </html>

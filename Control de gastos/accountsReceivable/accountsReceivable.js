@@ -55,9 +55,38 @@ function diasDiferencia(hoy, fechaObjetivo) {
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
 
-function yaPagoEsteMes(cobro) {
+/* ======================
+   PERIODICIDAD
+====================== */
+function obtenerDiasPorPeriodicidad(periodicidad, diaMensual) {
+  if (periodicidad === "quincenal") return [15, 30];
+  if (periodicidad === "decadal") return [10, 20, 30];
+  // mensual
+  return [Number(diaMensual)];
+}
+
+function obtenerPeriodos(periodicidad) {
+  if (periodicidad === "quincenal") {
+    return [
+      { key: "Q1", dia: 15, label: "Quincena 1 (15)" },
+      { key: "Q2", dia: 30, label: "Quincena 2 (30)" }
+    ];
+  }
+
+  if (periodicidad === "decadal") {
+    return [
+      { key: "D1", dia: 10, label: "Década 1 (10)" },
+      { key: "D2", dia: 20, label: "Década 2 (20)" },
+      { key: "D3", dia: 30, label: "Década 3 (30)" }
+    ];
+  }
+
+  return [{ key: "M1", dia: null, label: "Mensual" }];
+}
+
+function yaPagoPeriodoEsteMes(cobro, periodoKey) {
   const mes = obtenerMesActual();
-  return (cobro.historialPagos || []).some(p => p.mes === mes);
+  return (cobro.historialPagos || []).some(p => p.mes === mes && p.periodoKey === periodoKey);
 }
 
 /* ======================
@@ -65,6 +94,7 @@ function yaPagoEsteMes(cobro) {
 ====================== */
 let modalPago;
 let cobroSeleccionado = null;
+let periodoSeleccionado = null;
 
 function cargarCuentasEnModal() {
   const select = document.getElementById("cuentaPagoModal");
@@ -90,11 +120,13 @@ function cargarCuentasEnModal() {
   });
 }
 
-function abrirModalPago(cobro) {
+function abrirModalPago(cobro, periodo) {
   cobroSeleccionado = cobro;
+  periodoSeleccionado = periodo;
 
   document.getElementById("cobroId").value = cobro.id;
   document.getElementById("deudorModal").value = cobro.nombreDeudor;
+  document.getElementById("periodoModal").value = periodo.label;
   document.getElementById("fechaPagoModal").value = hoyISO();
   document.getElementById("cuentaPagoModal").value = "";
   document.getElementById("valorPagoModal").value = "";
@@ -105,8 +137,8 @@ function abrirModalPago(cobro) {
   const info = document.getElementById("infoPendiente");
 
   if (cobro.tipoPago === "cuotas") {
-    ayuda.textContent = `Cuota sugerida: ${formatearCOP(cobro.cuotaMensual)}`;
-    document.getElementById("valorPagoModal").value = cobro.cuotaMensual;
+    ayuda.textContent = `Cuota sugerida: ${formatearCOP(cobro.cuotaValor)}`;
+    document.getElementById("valorPagoModal").value = cobro.cuotaValor;
   } else {
     ayuda.textContent = `Pago único sugerido: ${formatearCOP(cobro.saldoPendiente)}`;
     document.getElementById("valorPagoModal").value = cobro.saldoPendiente;
@@ -158,7 +190,7 @@ function pintarLista() {
     return;
   }
 
-  cobros.sort((a, b) => a.diaPago - b.diaPago);
+  cobros.sort((a, b) => a.nombreDeudor.localeCompare(b.nombreDeudor));
 
   cobros.forEach((c) => {
     const completado = Number(c.saldoPendiente || 0) <= 0;
@@ -166,15 +198,24 @@ function pintarLista() {
     const div = document.createElement("div");
     div.className = "border rounded p-3 mb-2";
 
+    const periodos = obtenerPeriodos(c.periodicidad);
+
     div.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start gap-3">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
           <strong>${c.nombreDeudor}</strong>
           <div class="text-muted small">${c.descripcion || ""}</div>
+
           <div class="small mt-1">
-            Día de pago: <strong>${c.diaPago}</strong> •
+            Periodicidad: <strong>${c.periodicidad}</strong> •
             Tipo: <strong>${c.tipoPago === "cuotas" ? "Cuotas" : "Pago único"}</strong>
           </div>
+
+          ${
+            c.tipoPago === "cuotas"
+              ? `<div class="small">Cuota: <strong>${formatearCOP(c.cuotaValor)}</strong></div>`
+              : ""
+          }
         </div>
 
         <div class="text-end">
@@ -186,9 +227,22 @@ function pintarLista() {
             ${
               completado
                 ? `<span class="badge text-bg-success">Pagado completo</span>`
-                : `<button class="btn btn-sm btn-success btn-recibir" data-id="${c.id}">
-                    Registrar pago
-                  </button>`
+                : `
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                      Registrar pago
+                    </button>
+                    <ul class="dropdown-menu">
+                      ${periodos.map(p => `
+                        <li>
+                          <button class="dropdown-item btn-abrir-pago" data-id="${c.id}" data-periodo="${p.key}">
+                            ${p.label}
+                          </button>
+                        </li>
+                      `).join("")}
+                    </ul>
+                  </div>
+                `
             }
 
             <button class="btn btn-sm btn-outline-danger btn-eliminar" data-id="${c.id}">
@@ -218,37 +272,73 @@ function pintarAlertas() {
     return;
   }
 
-  pendientes.sort((a, b) => a.diaPago - b.diaPago);
+  const alertas = [];
 
   pendientes.forEach((c) => {
-    if (yaPagoEsteMes(c)) return;
+    const periodos = obtenerPeriodos(c.periodicidad);
 
-    const fecha = fechaAjustadaDelMes(c.diaPago);
-    const faltan = diasDiferencia(hoy, fecha);
+    periodos.forEach((p) => {
+      const dia = (c.periodicidad === "mensual")
+        ? Number(c.diaPago)
+        : p.dia;
 
+      const fecha = fechaAjustadaDelMes(dia);
+      const faltan = diasDiferencia(hoy, fecha);
+
+      if (yaPagoPeriodoEsteMes(c, p.key)) return;
+
+      alertas.push({
+        cobroId: c.id,
+        nombreDeudor: c.nombreDeudor,
+        saldoPendiente: c.saldoPendiente,
+        cuotaValor: c.cuotaValor,
+        tipoPago: c.tipoPago,
+        periodoKey: p.key,
+        periodoLabel: p.label,
+        dia,
+        fecha,
+        faltan
+      });
+    });
+  });
+
+  if (alertas.length === 0) {
+    alertasDiv.innerHTML = `<div class="alert alert-success">🎉 Este mes ya registraste todos los pagos.</div>`;
+    return;
+  }
+
+  alertas.sort((a, b) => a.fecha - b.fecha);
+
+  alertas.forEach((a) => {
     let clase = "alert-secondary";
     let texto = "";
 
-    if (faltan > 5) {
+    if (a.faltan > 5) {
       clase = "alert-secondary";
-      texto = `📌 ${c.nombreDeudor}: debe pagar este mes (faltan ${faltan} días)`;
-    } else if (faltan >= 1 && faltan <= 5) {
+      texto = `📌 ${a.nombreDeudor}: ${a.periodoLabel} (faltan ${a.faltan} días)`;
+    } else if (a.faltan >= 1 && a.faltan <= 5) {
       clase = "alert-warning";
-      texto = `⚠️ ${c.nombreDeudor}: pago pronto (faltan ${faltan} días)`;
-    } else if (faltan === 0) {
+      texto = `⚠️ ${a.nombreDeudor}: ${a.periodoLabel} (faltan ${a.faltan} días)`;
+    } else if (a.faltan === 0) {
       clase = "alert-success";
-      texto = `💰 ${c.nombreDeudor}: paga HOY`;
+      texto = `💰 ${a.nombreDeudor}: ${a.periodoLabel} es HOY`;
     } else {
       clase = "alert-danger";
-      texto = `❌ ${c.nombreDeudor}: está vencido este mes`;
+      texto = `❌ ${a.nombreDeudor}: ${a.periodoLabel} está vencido`;
     }
+
+    const valorTexto = (a.tipoPago === "cuotas")
+      ? `Cuota: ${formatearCOP(a.cuotaValor)}`
+      : `Pendiente: ${formatearCOP(a.saldoPendiente)}`;
 
     const alerta = document.createElement("div");
     alerta.className = `alert ${clase} mb-2 d-flex justify-content-between align-items-center gap-2 flex-wrap`;
 
     alerta.innerHTML = `
-      <div>${texto} • Pendiente: ${formatearCOP(c.saldoPendiente)}</div>
-      <button class="btn btn-sm btn-success btn-recibir" data-id="${c.id}">Registrar pago</button>
+      <div>${texto} • ${valorTexto}</div>
+      <button class="btn btn-sm btn-success btn-abrir-pago" data-id="${a.cobroId}" data-periodo="${a.periodoKey}">
+        Registrar pago
+      </button>
     `;
 
     alertasDiv.appendChild(alerta);
@@ -256,13 +346,29 @@ function pintarAlertas() {
 }
 
 /* ======================
-   EVENTOS
+   FORM UI
 ====================== */
-document.getElementById("tipoPago").addEventListener("change", function () {
-  const cuota = document.getElementById("cuotaMensual");
+function actualizarUIFormulario() {
+  const periodicidad = document.getElementById("periodicidad").value;
+  const contDia = document.getElementById("contenedorDiaPago");
+  const diaPago = document.getElementById("diaPago");
+
+  if (periodicidad === "mensual") {
+    contDia.style.display = "block";
+    diaPago.required = true;
+  } else {
+    contDia.style.display = "none";
+    diaPago.required = false;
+    diaPago.value = "";
+  }
+}
+
+function actualizarUITipoPago() {
+  const tipoPago = document.getElementById("tipoPago").value;
+  const cuota = document.getElementById("cuotaValor");
   const ayuda = document.getElementById("ayudaCuota");
 
-  if (this.value === "unico") {
+  if (tipoPago === "unico") {
     cuota.value = "";
     cuota.disabled = true;
     ayuda.textContent = "No aplica para pago único.";
@@ -270,6 +376,17 @@ document.getElementById("tipoPago").addEventListener("change", function () {
     cuota.disabled = false;
     ayuda.textContent = "Obligatorio si es cuotas.";
   }
+}
+
+/* ======================
+   EVENTOS
+====================== */
+document.getElementById("periodicidad").addEventListener("change", function () {
+  actualizarUIFormulario();
+});
+
+document.getElementById("tipoPago").addEventListener("change", function () {
+  actualizarUITipoPago();
 });
 
 document.getElementById("formCobro").addEventListener("submit", function (e) {
@@ -278,8 +395,9 @@ document.getElementById("formCobro").addEventListener("submit", function (e) {
   const nombreDeudor = document.getElementById("nombreDeudor").value.trim();
   const descripcion = document.getElementById("descripcion").value.trim();
   const montoPrestado = Number(document.getElementById("montoPrestado").value);
+  const periodicidad = document.getElementById("periodicidad").value;
   const tipoPago = document.getElementById("tipoPago").value;
-  const cuotaMensual = Number(document.getElementById("cuotaMensual").value);
+  const cuotaValor = Number(document.getElementById("cuotaValor").value);
   const diaPago = Number(document.getElementById("diaPago").value);
 
   if (!nombreDeudor) {
@@ -292,14 +410,16 @@ document.getElementById("formCobro").addEventListener("submit", function (e) {
     return;
   }
 
-  if (!diaPago || diaPago < 1 || diaPago > 31) {
-    alert("El día debe estar entre 1 y 31");
-    return;
+  if (tipoPago === "cuotas") {
+    if (!cuotaValor || cuotaValor <= 0) {
+      alert("Ingresa un valor de cuota válido");
+      return;
+    }
   }
 
-  if (tipoPago === "cuotas") {
-    if (!cuotaMensual || cuotaMensual <= 0) {
-      alert("Ingresa una cuota mensual válida");
+  if (periodicidad === "mensual") {
+    if (!diaPago || diaPago < 1 || diaPago > 31) {
+      alert("El día de pago debe estar entre 1 y 31");
       return;
     }
   }
@@ -313,8 +433,9 @@ document.getElementById("formCobro").addEventListener("submit", function (e) {
     montoPrestado,
     saldoPendiente: montoPrestado,
     tipoPago,
-    cuotaMensual: tipoPago === "cuotas" ? cuotaMensual : null,
-    diaPago,
+    periodicidad,
+    diaPago: periodicidad === "mensual" ? diaPago : null,
+    cuotaValor: tipoPago === "cuotas" ? cuotaValor : null,
     historialPagos: []
   });
 
@@ -323,20 +444,20 @@ document.getElementById("formCobro").addEventListener("submit", function (e) {
   alert("Cuenta por cobrar guardada ✅");
   this.reset();
 
-  // reset cuota
-  document.getElementById("cuotaMensual").disabled = false;
-  document.getElementById("ayudaCuota").textContent = "Obligatorio si es cuotas.";
+  actualizarUIFormulario();
+  actualizarUITipoPago();
 
   pintarLista();
   pintarAlertas();
 });
 
 document.addEventListener("click", function (e) {
-  if (e.target.classList.contains("btn-recibir")) {
+  if (e.target.classList.contains("btn-abrir-pago")) {
     const id = e.target.getAttribute("data-id");
+    const periodoKey = e.target.getAttribute("data-periodo");
+
     const cobros = obtenerCobros();
     const cobro = cobros.find(c => String(c.id) === String(id));
-
     if (!cobro) return;
 
     if (Number(cobro.saldoPendiente || 0) <= 0) {
@@ -344,7 +465,15 @@ document.addEventListener("click", function (e) {
       return;
     }
 
-    abrirModalPago(cobro);
+    const periodo = obtenerPeriodos(cobro.periodicidad).find(p => p.key === periodoKey);
+    if (!periodo) return;
+
+    if (yaPagoPeriodoEsteMes(cobro, periodo.key)) {
+      alert("Ese periodo ya fue pagado este mes ✅");
+      return;
+    }
+
+    abrirModalPago(cobro, periodo);
   }
 
   if (e.target.classList.contains("btn-eliminar")) {
@@ -360,7 +489,7 @@ document.addEventListener("click", function (e) {
 });
 
 document.getElementById("btnGuardarPago").addEventListener("click", function () {
-  if (!cobroSeleccionado) return;
+  if (!cobroSeleccionado || !periodoSeleccionado) return;
 
   const cuentaId = document.getElementById("cuentaPagoModal").value;
   const fecha = document.getElementById("fechaPagoModal").value || hoyISO();
@@ -385,32 +514,31 @@ document.getElementById("btnGuardarPago").addEventListener("click", function () 
     return;
   }
 
-  // registrar movimiento ingreso
   const ok = registrarIngresoEnCuenta(
     cuentaId,
-    `Pago cuenta por cobrar: ${cobro.nombreDeudor}`,
+    `Pago CXC (${periodoSeleccionado.key}): ${cobro.nombreDeudor}`,
     fecha,
     valor
   );
 
   if (!ok) return;
 
-  // bajar saldo pendiente
   cobro.saldoPendiente = Number(cobro.saldoPendiente || 0) - valor;
 
-  // historial
   cobro.historialPagos = cobro.historialPagos || [];
   cobro.historialPagos.push({
     mes: obtenerMesActual(),
     fecha,
     valor,
-    cuentaId
+    cuentaId,
+    periodoKey: periodoSeleccionado.key
   });
 
   guardarCobros(cobros);
 
   modalPago.hide();
   cobroSeleccionado = null;
+  periodoSeleccionado = null;
 
   pintarLista();
   pintarAlertas();
@@ -420,6 +548,10 @@ document.getElementById("btnGuardarPago").addEventListener("click", function () 
 (function init() {
   modalPago = new bootstrap.Modal(document.getElementById("modalPago"));
   document.getElementById("fechaPagoModal").value = hoyISO();
+
+  actualizarUIFormulario();
+  actualizarUITipoPago();
+
   pintarLista();
   pintarAlertas();
 })();
