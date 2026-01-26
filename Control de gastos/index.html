@@ -8,6 +8,9 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
+  <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0d5123">
+
 </head>
 
 <body>
@@ -18,9 +21,9 @@
 
     <div class="ms-auto d-flex gap-2">
       <a class="btn btn-outline-light btn-sm" href="./accounts/Create/accounts.html">Crear Cuentas</a>
-      <a class="btn btn-outline-light btn-sm" href="./accounts/Balance/balance.html">Ver cuentas</a>
-      <a class="btn btn-outline-light btn-sm" href="./expenses/fixed-expenses.html">Gastos</a>
-      <a class="btn btn-outline-light btn-sm" href="./income/fixed-income.html">Ingresos</a>
+      <a class="btn btn-outline-light btn-sm" href="./variableMovements/variableMovement.html">Crear Movimientos</a>
+      <a class="btn btn-outline-light btn-sm" href="#">***</a>
+      <a class="btn btn-outline-light btn-sm" href="#">***</a>
     </div>
   </nav>
 
@@ -129,6 +132,13 @@
   </div>
 
   <script src="index.js"></script>
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js");
+  }
+</script>
+
 </body>
+
 
 </html>
