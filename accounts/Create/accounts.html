@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cuentas</title>
+  <link rel="stylesheet" href="accounts.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom px-3">
+    <a class="navbar-brand fw-bold">FinanzasApp</a>
+    <div class="ms-auto d-flex gap-2">
+      <a class="btn btn-outline-light btn-sm" href="../../index.html">Inicio</a>
+    </div>
+  </nav>
+
+  <h1>CREA TU CUENTA FINANCIERA</h1>
+
+  <form id="crearCuenta">
+    <!-- tipo de cuenta -->
+    <label for="tipoCuenta">Categoría:</label>
+    <select id="tipoCuenta" name="tipoCuenta">
+      <option value="">Seleccione</option>
+      <option value="solidaria">Cuenta cooperativa/solidaria</option>
+      <option value="bancaria">Cuenta Bancaria</option>
+      <option value="inversion">Cuenta de Inversión</option>
+      <option value="efectivo">Efectivo</option>
+    </select>
+
+    <!-- cuenta solidaria -->
+    <div id="camposCuentaSolidaria" class="bloque">
+      <label>Tipo de cuenta</label>
+      <select class="tipo">
+        <option>Fondo de empleados</option>
+        <option>Cooperativa de ahorro y crédito</option>
+        <option>Asociación mutual</option>
+        <option>Otras</option>
+      </select>
+
+      <label>Nombre Entidad</label>
+      <input class="nombre" type="text" placeholder="Cooperenka, Fedehaceb, etc.">
+
+      <label>Saldo inicial</label>
+      <input class="saldo" type="number">
+
+      <label>Moneda</label>
+      <select class="moneda">
+        <option>COP</option>
+        <option>USD</option>
+        <option>EUR</option>
+      </select>
+    </div>
+
+    <!-- cuenta bancaria -->
+    <div id="camposCuentaBancaria" class="bloque">
+      <label>Tipo de cuenta</label>
+      <select class="tipo">
+        <option>Ahorros</option>
+        <option>Corriente</option>
+      </select>
+
+      <label>Nombre Entidad</label>
+      <input class="nombre" type="text" placeholder="Bancolombia, Davivienda, etc.">
+
+      <label>Saldo inicial</label>
+      <input class="saldo" type="number">
+
+      <label>Moneda</label>
+      <select class="moneda">
+        <option>COP</option>
+        <option>USD</option>
+        <option>EUR</option>
+      </select>
+    </div>
+
+    <!-- cuenta inversión -->
+    <div id="camposCuentaInversion" class="bloque">
+      <label>Tipo de cuenta</label>
+      <select class="tipo">
+        <option>CDT</option>
+        <option>Fiducuenta</option>
+        <option>Fondo de inversión colectiva</option>
+        <option>Inversión virtual</option>
+        <option>Otras</option>
+      </select>
+
+      <label>Nombre Entidad</label>
+      <input class="nombre" type="text" placeholder="Alianza Fiduciaria, etc.">
+
+      <label>Saldo inicial</label>
+      <input class="saldo" type="number">
+
+      <label>Moneda</label>
+      <select class="moneda">
+        <option>COP</option>
+        <option>USD</option>
+        <option>EUR</option>
+      </select>
+    </div>
+
+    <!-- cuenta efectivo -->
+    <div id="camposCuentaEfectivo" class="bloque">
+      <p>No requiere tipo de cuenta</p>
+
+      <label>Saldo inicial</label>
+      <input class="saldo" type="number">
+
+      <label>Moneda</label>
+      <select class="moneda">
+        <option>COP</option>
+        <option>USD</option>
+        <option>EUR</option>
+      </select>
+    </div>
+
+    <button  type="submit">Crear cuenta</button>
+  </form>
+
+  <script src="accounts.js"></script>
+</body>
+
+</html>
