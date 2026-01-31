@@ -1,0 +1,191 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingresos Fijos - FinanzasApp</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom Design System -->
+  <link rel="stylesheet" href="../../css/variables.css">
+  <link rel="stylesheet" href="../../css/main.css">
+  <link rel="stylesheet" href="../../css/components.css">
+
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#0d5123">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <div id="navbar-container"></div>
+
+  <div class="container py-5">
+
+    <header class="text-center mb-5">
+      <h2 class="display-6 fw-bold text-primary">Ingresos Fijos</h2>
+      <p class="text-muted">Gestiona tus entradas de dinero recurrentes</p>
+    </header>
+
+    <div class="row g-4">
+
+      <!-- Left Column: Form & Alerts -->
+      <div class="col-lg-5">
+
+        <!-- Create Income Form -->
+        <div class="card-premium mb-4">
+          <div class="card-body">
+            <h5 class="fw-bold mb-3">Nuevo Ingreso</h5>
+
+            <form id="formIngresoFijo">
+              <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input type="text" id="nombre" class="form-control bg-light border-0"
+                  placeholder="Ej: Salario, Arriendo" required>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Día (1-31)</label>
+                  <input type="number" id="diaIngreso" class="form-control bg-light border-0" min="1" max="31" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Tipo</label>
+                  <select id="tipoValor" class="form-select bg-light border-0" required>
+                    <option value="fijo">Fijo</option>
+                    <option value="variable">Variable</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Valor Estimado</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-0">$</span>
+                  <input type="number" id="valor" class="form-control bg-light border-0" placeholder="0">
+                </div>
+                <div class="form-text small" id="ayudaValor">Obligatorio si es fijo.</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Fecha Inicio (Primer Cobro)</label>
+                <input type="date" id="fechaInicio" class="form-control bg-light border-0">
+                <div class="form-text small">Si lo dejas vacío, se asume hoy.</div>
+              </div>
+
+              <button class="btn btn-primary-custom w-100 shadow-sm" type="submit">Guardar Ingreso</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Monthly Alerts -->
+        <div class="card-premium">
+          <div class="card-body">
+            <h5 class="fw-bold mb-3">📅 Alertas del Mes</h5>
+            <div id="alertas" class="d-flex flex-column gap-2">
+              <!-- Alerts injected by JS -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: My Income List -->
+      <div class="col-lg-7">
+        <div class="card-premium h-100">
+          <div class="card-body">
+            <h5 class="fw-bold mb-4">Mis Ingresos Fijos</h5>
+            <div id="listaIngresos" class="d-flex flex-column gap-3">
+              <!-- List injected by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Recibir -->
+  <div class="modal fade" id="modalRecibir" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">Registrar Ingreso Recibido</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="ingresoId">
+
+          <div class="p-3 bg-light rounded mb-3">
+            <label class="small text-muted text-uppercase fw-bold">Ingreso</label>
+            <div id="nombreIngresoModalDisplay" class="fs-5 fw-bold text-primary"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cuenta de Destino</label>
+            <select id="cuentaIngresoModal" class="form-select border-0 bg-light shadow-sm" required>
+              <option value="">Seleccione cuenta...</option>
+            </select>
+            <div class="form-text text-danger" id="ayudaCuentas"></div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">Fecha</label>
+              <input type="date" id="fechaIngresoModal" class="form-control border-0 bg-light shadow-sm">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Valor Recibido</label>
+              <input type="number" id="valorIngresoModal" class="form-control border-0 bg-light shadow-sm"
+                placeholder="0">
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer border-0 pt-0">
+          <button class="btn btn-outline-light-custom text-dark border" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-success shadow-sm rounded-pill px-4" id="btnGuardarIngreso">Confirmar
+            Recepción</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Modal Historial -->
+  <div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">Historial de Ingresos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <h6 id="historialTitulo" class="fw-bold mb-3 text-success"></h6>
+          <div id="listaHistorial" class="d-flex flex-column gap-2" style="max-height: 300px; overflow-y: auto;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="fixed-income.js"></script>
+</body>
+
+</html>

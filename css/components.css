@@ -1,0 +1,104 @@
+/* Component Styles */
+
+/* --- Card --- */
+.card-premium {
+    position: relative;
+    background-color: var(--color-bg-card);
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+
+.card-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.card-premium .card-body {
+    padding: var(--spacing-lg);
+}
+
+/* --- Navbar --- */
+.navbar-custom {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.navbar-brand {
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.5px;
+    font-size: var(--font-size-lg);
+}
+
+/* --- Buttons --- */
+.btn-primary-custom {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-pill);
+    padding: 0.5rem 1.5rem;
+    font-weight: var(--font-weight-medium);
+}
+
+.btn-primary-custom:hover {
+    background-color: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+}
+
+.btn-outline-light-custom {
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: var(--radius-pill);
+    transition: all 0.2s ease;
+}
+
+.btn-outline-light-custom:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: white;
+    color: white;
+}
+
+/* --- Badge --- */
+.badge-custom {
+    padding: 0.5em 0.8em;
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-medium);
+    font-size: 0.75rem;
+}
+
+.badge-success-soft {
+    background-color: rgba(25, 135, 84, 0.1);
+    color: var(--color-success);
+}
+
+.badge-danger-soft {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--color-danger);
+}
+
+/* --- Floating Action Button (FAB) if needed --- */
+.fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-lg);
+    font-size: 1.5rem;
+    transition: transform 0.2s;
+    z-index: 1000;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    background-color: var(--color-accent-hover);
+}

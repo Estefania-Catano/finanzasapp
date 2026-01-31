@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanzasApp - Dashboard</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom Design System -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0d5123">
+</head>
+
+<body>
+
+  <!-- Navigation injected by JS -->
+  <div id="navbar-container"></div>
+
+  <div class="container py-4">
+
+    <!-- Header -->
+    <header class="mb-5 text-center">
+      <h2 class="display-6 fw-bold text-primary">Resumen Financiero</h2>
+      <p class="text-muted">Tu estado financiero al día de hoy</p>
+    </header>
+
+    <!-- Main Balance Card -->
+    <div class="row justify-content-center mb-5">
+      <div class="col-md-8 col-lg-6">
+        <div class="card-premium bg-glass text-center p-4 position-relative overflow-hidden">
+          <!-- Decorative circle -->
+          <div
+            style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(13, 81, 35, 0.1); border-radius: 50%;">
+          </div>
+
+          <h6 class="text-uppercase text-muted fw-bold mb-2" style="letter-spacing: 1px;">Saldo Total</h6>
+          <h1 id="saldoTotal" class="display-4 fw-bold text-success mb-3">$0</h1>
+
+          <div class="d-flex justify-content-center gap-3 mt-2">
+            <span class="badge bg-light text-dark shadow-sm border">
+              <span id="totalCuentas">0</span> Cuentas Activas
+            </span>
+          </div>
+
+          <div class="mt-4 position-relative z-2 d-flex justify-content-center gap-2">
+            <a class="btn btn-primary-custom btn-sm px-4 shadow-sm" href="./accounts/Balance/balance.html">Ver
+              Cuentas</a>
+            <a class="btn btn-outline-success btn-sm px-4 shadow-sm" href="./accounts/Create/accounts.html">Crear
+              Cuenta</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="row g-4 mb-5">
+      <!-- Movimientos Diarios (Variables) -->
+      <div class="col-12 col-md-12">
+        <div
+          class="card-premium h-100 p-3 d-flex align-items-center justify-content-between bg-light border-0 shadow-sm">
+          <div class="d-flex align-items-center gap-3">
+            <div class="fs-1 bg-white p-2 rounded-circle shadow-sm">💸</div>
+            <div>
+              <h5 class="fw-bold m-0 text-dark">Movimientos Diarios</h5>
+              <p class="text-muted small m-0">Registra tus gastos hormiga e ingresos extra</p>
+            </div>
+          </div>
+          <a href="./variableMovements/variableMovement.html" class="btn btn-dark rounded-pill px-4 shadow-sm">Ir a
+            Movimientos →</a>
+        </div>
+      </div>
+
+      <!-- Ingresos -->
+      <div class="col-6 col-md-3">
+        <div class="card-premium h-100 text-center">
+          <div class="card-body">
+            <span class="fs-1">💰</span>
+            <h6 class="mt-3 text-muted">Ingresos Fijos</h6>
+            <h4 id="totalIngresosFijos" class="m-0">0</h4>
+            <a href="./income/fixed-income.html" class="stretched-link"></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gastos -->
+      <div class="col-6 col-md-3">
+        <div class="card-premium h-100 text-center">
+          <div class="card-body">
+            <span class="fs-1">📉</span>
+            <h6 class="mt-3 text-muted">Gastos Fijos</h6>
+            <h4 id="totalGastosFijos" class="m-0">0</h4>
+            <a href="./expenses/fixed-expenses.html" class="stretched-link"></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- CXC -->
+      <div class="col-6 col-md-3">
+        <div class="card-premium h-100 text-center">
+          <div class="card-body">
+            <span class="fs-1">📥</span>
+            <h6 class="mt-3 text-muted">Por Cobrar</h6>
+            <h4 id="totalaccountsReceivable" class="m-0">0</h4>
+            <a href="./accountsReceivable/accountsReceivable.html" class="stretched-link"></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- CXP -->
+      <div class="col-6 col-md-3">
+        <div class="card-premium h-100 text-center">
+          <div class="card-body">
+            <span class="fs-1">📤</span>
+            <h6 class="mt-3 text-muted">Por Pagar</h6>
+            <h4 id="totalaccountsPayable" class="m-0">0</h4>
+            <a href="./accountsPayable/accountsPayable.html" class="stretched-link"></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projected Balance -->
+    <div class="card-premium mb-4">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <h6 class="text-muted mb-1">Disponible Proyectado (Mes)</h6>
+          <h3 id="disponibleProyectado" class="m-0 text-primary">$0</h3>
+        </div>
+        <div class="text-end">
+          <small class="text-muted d-block" id="detalleDisponible"></small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Updates / Alerts Section -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h5 class="fw-bold m-0">🔔 Alertas y Vencimientos</h5>
+    </div>
+
+    <div id="alertasDashboard">
+      <!-- Alerts injected by JS -->
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Main Logic -->
+  <script type="module" src="index.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
+  </script>
+
+</body>
+
+</html>
