@@ -1,4 +1,4 @@
-const CACHE_NAME = "finanzasapp-v3";
+const CACHE_NAME = "finanzasapp-v4";
 
 const FILES_TO_CACHE = [
   "./",
